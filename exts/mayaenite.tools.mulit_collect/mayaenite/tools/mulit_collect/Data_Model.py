@@ -4,8 +4,9 @@ from . import Utils
 ########################################################################
 class Data_Return_Types:
     """  """
-    Name = 0
+    Name_Or_Path = 0
     Path = 1
+    Name = 2
 
 class AssetItem(ui.AbstractItem):
     """Single item of the model"""
@@ -14,17 +15,17 @@ class AssetItem(ui.AbstractItem):
         super().__init__()
         self.asset_path_model = ui.SimpleStringModel(assetpath)
         self.asset_name_model = ui.SimpleStringModel(pathlib.Path(assetpath).stem)
-
 class Asset_Files_Model(ui.AbstractItemModel):
     """
     Represents the list of commands registered in Kit.
     It is used to make a single level tree appear like a simple list.
     """
     #----------------------------------------------------------------------
-    def __init__(self):
+    def __init__(self,fullpath_option:ui.CheckBox = None):
         super().__init__()
         self._save_location = str()
         self._asset_files = []
+        self._fullpath_option = fullpath_option
     #----------------------------------------------------------------------
     def get_save_location(self) -> str:
         """  """
@@ -40,6 +41,14 @@ class Asset_Files_Model(ui.AbstractItemModel):
         """Called by subscribe_on_change"""
         self._asset_files = []
         self._item_changed(None)
+    #----------------------------------------------------------------------
+    def _update_on_display_option_changed(self,value):
+        """Called when full path option is changed"""
+        temp_data = [item.asset_path_model.as_string for item in self._asset_files]
+        self._asset_files = []
+        for item_path in temp_data:
+            self.add_item(item_path)
+        # self._item_changed(None)
     #----------------------------------------------------------------------
     def get_item_children(self, item=None):
         """Returns all the children when the widget asks it."""
@@ -60,10 +69,15 @@ class Asset_Files_Model(ui.AbstractItemModel):
         It's the object that tracks the specific value.
         In our case we use ui.SimpleStringModel.
         """ 
-        if item_data_id == Data_Return_Types.Name and item and isinstance(item, AssetItem):
+        if item_data_id == Data_Return_Types.Name_Or_Path and item and isinstance(item, AssetItem):
+            if self._fullpath_option is not None:
+                if self._fullpath_option.model.as_bool:
+                    return item.asset_path_model
             return item.asset_name_model
         elif item_data_id == Data_Return_Types.Path and item and isinstance(item, AssetItem):
             return item.asset_path_model
+        elif item_data_id == Data_Return_Types.Name and item and isinstance(item, AssetItem):
+            return item.asset_name_model
     #----------------------------------------------------------------------
     def remove_item(self, item: AssetItem) -> None: 
         """

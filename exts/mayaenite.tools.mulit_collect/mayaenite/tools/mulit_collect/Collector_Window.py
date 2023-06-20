@@ -19,6 +19,8 @@ class Asset_Collector_Window(ui.Window):
     #----------------------------------------------------------------------
     def __init__(self,name:str,**kwargs) -> None:
         """ Constructor """
+        kwargs["width"]  = 600
+        kwargs["height"] = 600
         super().__init__(name,**kwargs)
         self._current_task = 0
         self._total_task_count = 0
@@ -36,13 +38,15 @@ class Asset_Collector_Window(ui.Window):
             self._current_task = 0
             self._total_task_count = len(files_to_be_collected)
             self._created_folders = []
+            self._usdz_progress.model.set_value(0.0)
             for assetFile in files_to_be_collected:
                 collect_dir = os.path.join(self._data_model.save_location,assetFile.asset_name_model.as_string).replace("\\","/")
                 self._created_folders.append(collect_dir)
             #----------------------------------------------------------------------
             def build_usdz_files() -> None:
                 """  """
-                builder = USDZ_Builder(self._created_folders,self._usdz_progress)
+                if self._generate_usdz_option.model.as_bool:
+                    builder = USDZ_Builder(self._created_folders,self._usdz_progress)
             #----------------------------------------------------------------------
             def do_next():
                 """  """
@@ -69,14 +73,19 @@ class Asset_Collector_Window(ui.Window):
         with self.frame:
 
             with ui.VStack(spacing=10):
+                with ui.HStack(height=20,spacing=ui.Fraction(3)):
+                    label_style = {"Label": {"font_size": 20, "color": cl.black, "alignment":ui.Alignment.LEFT_CENTER }}
+                    checkbox_style = {"CheckBox":{"color": cl("#ff5555"), "border_radius": 5, "background_color": cl(0.35), "font_size": 20}}
+                    self._show_full_path_option = ui.CheckBox(width=0,style=checkbox_style)
+                    ui.Label("Show Full Path", width=20, style=label_style)
 
                 with ui.ScrollingFrame(height=ui.Fraction(8),
                                        horizontal_scrollbar_policy=ui.ScrollBarPolicy.SCROLLBAR_ALWAYS_OFF,
                                        vertical_scrollbar_policy=ui.ScrollBarPolicy.SCROLLBAR_ALWAYS_ON,
                                        style_type_name_override="TreeView"):
-                    self._data_model = Data_Model.Asset_Files_Model()
+                    self._data_model = Data_Model.Asset_Files_Model(fullpath_option=self._show_full_path_option)
                     self._data_view  = ui.TreeView(self._data_model,root_visible=False,header_visible=False,style={"TreeView.Item": {"margin": 4}})
-                
+                    self._show_full_path_option.model.add_value_changed_fn(self._data_model._update_on_display_option_changed)
                 with ui.HStack(height=50):
                     ui.Button("Add", clicked_fn   = self._data_model.add_Selected_Assets_From_Active_Browser)
                     ui.Button("Remove",clicked_fn = lambda : self._data_model.remove_Assets_Selected_In_View(self._data_view))
@@ -158,3 +167,4 @@ class Asset_Collector_Window(ui.Window):
         self._master_progress = None
         self._generate_usdz_option = None
         self._usdz_progress = None
+        self._show_full_path_option = None
